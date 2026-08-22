@@ -1,0 +1,3 @@
+/media/vithurshan/vithu/rand/build/CMakeFiles/run.dir
+/media/vithurshan/vithu/rand/build/CMakeFiles/edit_cache.dir
+/media/vithurshan/vithu/rand/build/CMakeFiles/rebuild_cache.dir

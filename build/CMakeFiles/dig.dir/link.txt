@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/dig.dir/dig.cpp.o -o dig  -ltbb 
