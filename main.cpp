@@ -51,8 +51,9 @@ void neighbourhoodFilter(std::array<int, dim> a, int current_dim, std::vector<st
         std::array<int, dim> c = a; 
         b[current_dim-1] -=1;                                                                                                                     
         c[current_dim-1] +=1;                                                                 
-        neighbourhoodFilter(b, current_dim - 1, changes);                                                                                               
-       	neighbourhoodFilter(c, current_dim - 1, changes);                                                                                                   	neighbourhoodFilter(a, current_dim - 1, changes);                                                                                                   
+        neighbourhoodFilter(b, current_dim-1, changes);                                                                                               
+       	neighbourhoodFilter(c, current_dim-1, changes);
+	neighbourhoodFilter(a, current_dim-1, changes);                                                                                                   
 }
 
 template <int dim, typename HashMap>                                                                                                             
@@ -67,10 +68,11 @@ float findMinAroundNeighbourhood(std::array<int, dim> grid_i, HashMap& gridhashm
             if (it != gridhashmap.end()) {                                                                                                           
                 for (const auto& ps : it->second) {                                                                                                  
                     float dist = Point<dim>::eucledianDistance(pi, ps);                                                                              
-                    if (dist < min) {min = dist;}                                                                                                                       }                                                                                                                                    
-            }                                                                                                                                        
-        }                                                                                                                                            
-        return min;                                                                                                                                  
+                    if (dist < min) {min = dist;}
+		}
+	    }
+	}                                                                                                                                            
+        return min;
 }  
 
 
