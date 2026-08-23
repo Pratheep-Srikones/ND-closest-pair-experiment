@@ -118,43 +118,6 @@ float findMinDistGridBased(Space<dim, size>& space) {
 
 
 
-
-//changefinder(a,dim,&changes){
-//	if(dim ==0){
-//		return change.pushback(a)
-//	}
-//	b = a
-//	c = a
-//	b[dim-1] -= 1
-//	c[dim-1] += 1
-//
-//	changefinder(b,dim-1,changes);
-//	changefinder(c,dim-1,changes);
-//	changefinder(a,dim-1,changes);
-//	
-//}
-
-//vector<array[dim]> changes;
-//changefinder(array<int,dim> a{},dim,changes);
-//float findmin(grid_i,gridhashmap,pi){
-//	min = inf
-//	for change in changes{
-//		neighbour = change+grid_i
-//		for all ps in gridhashmap.get(hash(neighbour)){
-//			dist = Point::euclideandistance(pi,ps)
-//			if(dist<min){min = dist}
-//
-//		}
-//
-//	}	
-//    
-//
-//}
-//
-
-
-
-
 int main(){
 	Space<3,1000000> s;
 	std::cout<<"space generated"<<std::endl;
