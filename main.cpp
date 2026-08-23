@@ -50,9 +50,9 @@ void neighbourhoodFilter(std::array<int, dim> a, int current_dim, std::vector<st
         std::array<int, dim> b = a;                                                                                                                  
         std::array<int, dim> c = a; 
         b[current_dim-1] -=1;                                                                                                                     
-        c[current_dim-1] +=1;                                                                 
-        neighbourhoodFilter(b, current_dim-1, changes);                                                                                               
-       	neighbourhoodFilter(c, current_dim-1, changes);
+        c[current_dim-1] +=1;
+	neighbourhoodFilter(b, current_dim-1, changes);
+	neighbourhoodFilter(c, current_dim-1, changes);
 	neighbourhoodFilter(a, current_dim-1, changes);                                                                                                   
 }
 
