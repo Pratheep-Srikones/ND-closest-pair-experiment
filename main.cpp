@@ -1,138 +1,38 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <chrono>
+#include <cstddef>
 #include <iostream>
-#include <cmath>
-#include <array>
+
+#include "closest_pair.h"
 #include "space.h"
 
+using namespace std;
 
-template <int dim, long size>
-float findMinDistBruteforce(Space<dim,size>& space){
-	float min= INFINITY;
-	std::array<Point<dim>,2> closest;
-	for(long i=0;i<size;i++ ){
-		for(long j=0;j<size;j++){
-			if(i==j){continue;}
-			float distance = Point<dim>::eucledianDistance(space.points[i],space.points[j]);
-			if(distance < min){
-				min=distance;
-				std::cout<<"current minimum is "<<min<<std::endl;
-				closest[0] = space.points[i];
-				closest[1] = space.points[j];
-			}
+int main() {
+    constexpr size_t Dim = 3;
+    constexpr size_t NumPoints = 10'000'000;
 
-		}
-	}
-	return min;
-	
+    cout << "Generating " << NumPoints << " points in " << Dim << "D space..." << endl;
+    auto start_gen = chrono::high_resolution_clock::now();
+    Space<Dim, NumPoints> space;
+    auto end_gen = chrono::high_resolution_clock::now();
+    chrono::duration<double> gen_time = end_gen - start_gen;
+    cout << "Space generated in " << gen_time.count() << " s." << endl;
 
+    cout << "\n--- Running Deterministic Grid-based Closest Pair ---" << endl;
+    auto start_grid = chrono::high_resolution_clock::now();
+    float min_dist_grid = find_min_dist_grid_based(space, false);
+    auto end_grid = chrono::high_resolution_clock::now();
+    chrono::duration<double> grid_time = end_grid - start_grid;
+    cout << "Minimum distance (grid-based): " << min_dist_grid << endl;
+    cout << "Completed in " << grid_time.count() << " s." << endl;
 
-}
+    cout << "\n--- Running Randomized (Shuffled) Grid-based Closest Pair ---" << endl;
+    auto start_rand = chrono::high_resolution_clock::now();
+    float min_dist_rand = find_min_dist_grid_based_randomized(space, false);
+    auto end_rand = chrono::high_resolution_clock::now();
+    chrono::duration<double> rand_time = end_rand - start_rand;
+    cout << "Minimum distance (randomized grid): " << min_dist_rand << endl;
+    cout << "Completed in " << rand_time.count() << " s." << endl;
 
-struct ArrayHasher {                                                                                                                             
-	template <size_t dim>                                                                                                                           
-        std::size_t operator()(const std::array<int, dim>& a) const {                                                                                
-            std::size_t h = 0;                                                                                                                       
-            for (auto e : a) {                                                                                                                       
-                h ^= std::hash<int>{}(e) + 0x9e3779b9 + (h<<6)+(h>>2);                                                                         
-            }                                                                                                                                        
-            return h;                                                                                                                                
-        }                                                                                                                                            
-};
-
-template <size_t dim>                                                                                                                               
-void neighbourhoodFilter(std::array<int, dim> a, int current_dim, std::vector<std::array<int, dim>>& changes) {                                         
-        if (current_dim == 0) {                                                                                                                      
-            changes.push_back(a);                                                                                                                    
-            return;                                                                                                                                  
-        }                                                                                                                                            
-                                                                                                                                                     
-        std::array<int, dim> b = a;                                                                                                                  
-        std::array<int, dim> c = a; 
-        b[current_dim-1] -=1;                                                                                                                     
-        c[current_dim-1] +=1;
-		neighbourhoodFilter(b, current_dim-1, changes);
-		neighbourhoodFilter(c, current_dim-1, changes);
-		neighbourhoodFilter(a, current_dim-1, changes);                                                                                                   
-}
-
-template <int dim, typename HashMap>                                                                                                             
-float findMinAroundNeighbourhood(std::array<int, dim> grid_i, HashMap& gridhashmap, const Point<dim>& pi, const std::vector<std::array<int, dim>>& changes) {       
-	float min = INFINITY;                                                                                                                           
-        for (const auto& change : changes) {                                                                                                         
-            std::array<int, dim> neighbour;                                                                                                          
-            for (int d = 0; d < dim; ++d) {                                                                                                          
-                neighbour[d] = change[d]+ grid_i[d];                                                                                                
-            }                                                                                
-            auto it = gridhashmap.find(neighbour);                                                                                                   
-            if (it != gridhashmap.end()) {                                                                                                           
-                for (const auto& ps : it->second) {                                                                                                  
-                    float dist = Point<dim>::eucledianDistance(pi, ps);                                                                              
-                    if (dist < min) {min = dist;}
-		}
-	    }
-	}                                                                                                                                            
-        return min;
-}  
-
-
-
-template <int dim, long size>                                                                                                                    
-float findMinDistGridBased(Space<dim, size>& space) {                                                                                                           
-	std::vector<std::array<int, dim>> changes;                                                                                                   
-        std::array<int, dim> initial_a = {};                                                                                                         
-        neighbourhoodFilter<dim>(initial_a, dim, changes);
-	if(size<2){return INFINITY;}
-        float delta = Point<dim>::eucledianDistance(space.points[0], space.points[1]);                                                               
-        if (delta == 0.0f) { return delta; }                                                                                                                                                                                                 
-        std::unordered_map<std::array<int, dim>, std::vector<Point<dim>>, ArrayHasher> gridhashmap;                                                  
-                                                                                                                           
-        for (long i = 0; i < size; ++i) {                                                                                                            
-            const auto& pi = space.points[i];                                                                                                               
-            std::array<int, dim> grid_i;
-            for (int d = 0; d < dim; ++d) {
-                grid_i[d] = std::floor(pi.coordinates[d] / delta);
-            }
-  
-            float min_dist = findMinAroundNeighbourhood<dim>(grid_i, gridhashmap, pi, changes);
-            
-            gridhashmap[grid_i].push_back(pi);
-  
-            if (min_dist < delta) {
-		    std::cout<<"minimum changed to "<<min_dist<<" regridination happening"<<std::endl;
-		    delta = min_dist;
-		    gridhashmap.clear();
-		    if (delta == 0.0f) { return delta; }
-
-		    for (long j = 0; j <= i; ++j) {
-			    const auto& pj = space.points[j];
-			    std::array<int, dim> grid_j;
-			    for (int d = 0; d < dim; ++d) {
-				    grid_j[d] = std::floor(pj.coordinates[d] / delta);
-			    }
-			    gridhashmap[grid_j].push_back(pj);
-		    }
-	    }
-	}
-        return delta;
-    }
-
-
-
-
-int main(){
-	Space<3,1000000> s;
-	std::cout<<"space generated"<<std::endl;
-	/*   
-        for(auto& p : s.points) {                                                                                                            
-            for(auto& coor:p.coordinates){
-		std::cout<<coor<<" ";
-	    }                        
-	    std::cout<<std::endl;
-        }*/
-	//auto mindistancebr = findMinDistBruteforce(s);
-	auto mindistance = findMinDistGridBased(s);
-	std::cout<<"min distance grid is "<<mindistance<<std::endl;
-	//std::cout<<"min distance grid is "<<mindistance<<std::endl;
-	return 0;
+    return 0;
 }

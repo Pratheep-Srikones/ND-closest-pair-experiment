@@ -1,53 +1,60 @@
 #ifndef SPACE_H
 #define SPACE_H
 
-#include <vector>
-#include <random>
 #include <algorithm>
-#include <execution>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <execution>
+#include <random>
+#include <vector>
 
-template <int N>
-struct Point{
-	std::array<float,N> coordinates;
-	static float eucledianDistance(const Point<N>& p1, const Point<N>& p2);
-};
+/// Represents a point in N-dimensional space.
+template <std::size_t Dim>
+struct Point {
+    std::array<float, Dim> coordinates{};
 
-template <int N>
-inline float Point<N>::eucledianDistance(const Point<N>& p1, const Point<N>& p2){
-	float sumOfSquares = 0.0f;
-        for (int i = 0; i < N; ++i) {
-            float diff = p1.coordinates[i] - p2.coordinates[i];
-            sumOfSquares += (diff * diff);
+    /// Calculates the Euclidean distance from this point to another point.
+    [[nodiscard]] float distance_to(const Point<Dim>& other) const noexcept {
+        float sum_of_squares = 0.0f;
+        for (std::size_t i = 0; i < Dim; ++i) {
+            float diff = coordinates[i] - other.coordinates[i];
+            sum_of_squares += diff * diff;
         }
-        return std::sqrt(sumOfSquares);
-}
+        return std::sqrt(sum_of_squares);
+    }
 
+    /// Static helper to compute Euclidean distance between two points.
+    [[nodiscard]] static float euclidean_distance(const Point<Dim>& p1, const Point<Dim>& p2) noexcept {
+        return p1.distance_to(p2);
+    }
 
-template <int dim, long size>
-struct Space{
-	int dimension;
-	int pointsSize;
-	std::vector<Point<dim>> points;
-	Space();
-
+    /// Backward compatibility alias for misspelled legacy method name.
+    [[nodiscard]] static float eucledianDistance(const Point<Dim>& p1, const Point<Dim>& p2) noexcept {
+        return euclidean_distance(p1, p2);
+    }
 };
 
+/// Container representing an N-dimensional space populated with random points.
+template <std::size_t Dim, std::size_t Size>
+struct Space {
+    static constexpr std::size_t dimension = Dim;
+    static constexpr std::size_t points_size = Size;
 
-template <int dim, long size>
-inline Space<dim,size>::Space():dimension(dim),pointsSize(size),points(size){
-	std::for_each(std::execution::par,std::begin(points),std::end(points),[](auto& point){
-		thread_local std::random_device rd;
-    	thread_local std::mt19937 eng(rd());
-		std::uniform_real_distribution<float> dist(0.0f,1000.0f);
+    std::vector<Point<Dim>> points;
 
-		for(auto& coor:point.coordinates){
-			coor = dist(eng);
-		}
-	});
-	
-}
+    /// Initializes points with uniform random coordinates in [min_val, max_val].
+    explicit Space(float min_val = 0.0f, float max_val = 1000.0f) : points(Size) {
+        std::for_each(std::execution::par, points.begin(), points.end(), [min_val, max_val](Point<Dim>& point) {
+            thread_local std::random_device rd;
+            thread_local std::mt19937 gen(rd());
+            std::uniform_real_distribution<float> dist(min_val, max_val);
 
+            for (auto& coord : point.coordinates) {
+                coord = dist(gen);
+            }
+        });
+    }
+};
 
-
-#endif
+#endif // SPACE_H
