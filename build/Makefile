@@ -129,6 +129,56 @@ run/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/build
 .PHONY : run/fast
 
+#=============================================================================
+# Target rules for targets named experiment
+
+# Build rule for target.
+experiment: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 experiment
+.PHONY : experiment
+
+# fast build rule for target.
+experiment/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/experiment.dir/build.make CMakeFiles/experiment.dir/build
+.PHONY : experiment/fast
+
+#=============================================================================
+# Target rules for targets named verify
+
+# Build rule for target.
+verify: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 verify
+.PHONY : verify
+
+# fast build rule for target.
+verify/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/verify.dir/build.make CMakeFiles/verify.dir/build
+.PHONY : verify/fast
+
+experiment.o: experiment.cpp.o
+.PHONY : experiment.o
+
+# target to build an object file
+experiment.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/experiment.dir/build.make CMakeFiles/experiment.dir/experiment.cpp.o
+.PHONY : experiment.cpp.o
+
+experiment.i: experiment.cpp.i
+.PHONY : experiment.i
+
+# target to preprocess a source file
+experiment.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/experiment.dir/build.make CMakeFiles/experiment.dir/experiment.cpp.i
+.PHONY : experiment.cpp.i
+
+experiment.s: experiment.cpp.s
+.PHONY : experiment.s
+
+# target to generate assembly for a file
+experiment.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/experiment.dir/build.make CMakeFiles/experiment.dir/experiment.cpp.s
+.PHONY : experiment.cpp.s
+
 main.o: main.cpp.o
 .PHONY : main.o
 
@@ -153,6 +203,30 @@ main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/main.cpp.s
 .PHONY : main.cpp.s
 
+verify.o: verify.cpp.o
+.PHONY : verify.o
+
+# target to build an object file
+verify.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/verify.dir/build.make CMakeFiles/verify.dir/verify.cpp.o
+.PHONY : verify.cpp.o
+
+verify.i: verify.cpp.i
+.PHONY : verify.i
+
+# target to preprocess a source file
+verify.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/verify.dir/build.make CMakeFiles/verify.dir/verify.cpp.i
+.PHONY : verify.cpp.i
+
+verify.s: verify.cpp.s
+.PHONY : verify.s
+
+# target to generate assembly for a file
+verify.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/verify.dir/build.make CMakeFiles/verify.dir/verify.cpp.s
+.PHONY : verify.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -161,10 +235,18 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... experiment"
 	@echo "... run"
+	@echo "... verify"
+	@echo "... experiment.o"
+	@echo "... experiment.i"
+	@echo "... experiment.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
+	@echo "... verify.o"
+	@echo "... verify.i"
+	@echo "... verify.s"
 .PHONY : help
 
 
