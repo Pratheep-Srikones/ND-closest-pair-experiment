@@ -35,6 +35,16 @@ struct Point {
     }
 };
 
+/// Defines the strategy used to order/sort points within N-dimensional space.
+enum class SortStrategy {
+    AxisAscending,               ///< Sort points along a specific coordinate axis in ascending order.
+    AxisDescending,              ///< Sort points along a specific coordinate axis in descending order.
+    RandomShuffle,               ///< Uniformly random shuffle of point order.
+    DistanceToOriginAscending,   ///< Sort by distance from origin (0, 0, ...) ascending.
+    DistanceToOriginDescending,  ///< Sort by distance from origin (0, 0, ...) descending.
+    Adversarial                  ///< Order points to maximize grid rebuilds in incremental closest-pair algorithms.
+};
+
 /// Container representing an N-dimensional space populated with random points.
 template <std::size_t Dim, std::size_t Size>
 struct Space {
@@ -54,6 +64,100 @@ struct Space {
                 coord = dist(gen);
             }
         });
+    }
+
+    /// Sorts or orders points according to the given SortStrategy.
+    /// @param strategy Strategy enum defining the point ordering method.
+    /// @param axis Coordinate dimension axis to sort along (used when strategy is AxisAscending or AxisDescending).
+    void sort_points(SortStrategy strategy, std::size_t axis = 0) {
+        if (axis >= Dim) {
+            axis = 0;
+        }
+
+        switch (strategy) {
+            case SortStrategy::AxisAscending:
+                std::sort(std::execution::par, points.begin(), points.end(), [axis](const Point<Dim>& a, const Point<Dim>& b) {
+                    return a.coordinates[axis] < b.coordinates[axis];
+                });
+                break;
+
+            case SortStrategy::AxisDescending:
+                std::sort(std::execution::par, points.begin(), points.end(), [axis](const Point<Dim>& a, const Point<Dim>& b) {
+                    return a.coordinates[axis] > b.coordinates[axis];
+                });
+                break;
+
+            case SortStrategy::RandomShuffle: {
+                std::random_device rd;
+                std::mt19937 g(rd());
+                std::shuffle(points.begin(), points.end(), g);
+                break;
+            }
+
+            case SortStrategy::DistanceToOriginAscending: {
+                Point<Dim> origin{};
+                std::sort(std::execution::par, points.begin(), points.end(), [&origin](const Point<Dim>& a, const Point<Dim>& b) {
+                    return a.distance_to(origin) < b.distance_to(origin);
+                });
+                break;
+            }
+
+            case SortStrategy::DistanceToOriginDescending: {
+                Point<Dim> origin{};
+                std::sort(std::execution::par, points.begin(), points.end(), [&origin](const Point<Dim>& a, const Point<Dim>& b) {
+                    return a.distance_to(origin) > b.distance_to(origin);
+                });
+                break;
+            }
+
+            case SortStrategy::Adversarial: {
+                generate_adversarial_ordering();
+                break;
+            }
+        }
+    }
+
+    /// Legacy convenience wrapper to sort points ascending along a specific axis.
+    void sort_points_by_axis(int axis) {
+        sort_points(SortStrategy::AxisAscending, static_cast<std::size_t>(axis < 0 ? 0 : axis));
+    }
+
+private:
+    /// Rearranges points into an adversarial order for incremental grid closest pair.
+    /// Points are reordered so that consecutive points decrease pairwise distance as frequently as possible,
+    /// triggering frequent grid rebuilds.
+    void generate_adversarial_ordering() {
+        if (points.size() <= 2) return;
+
+        // Sort points along primary axis to establish initial order
+        std::sort(points.begin(), points.end(), [](const Point<Dim>& a, const Point<Dim>& b) {
+            return a.coordinates[0] < b.coordinates[0];
+        });
+
+        // Construct adversarial sequence by interleaved/inward distance progression
+        std::vector<Point<Dim>> adversarial_seq;
+        adversarial_seq.reserve(points.size());
+
+        std::size_t left = 0;
+        std::size_t right = points.size() - 1;
+
+        while (left <= right) {
+            if (left == right) {
+                adversarial_seq.push_back(points[left]);
+                break;
+            }
+            adversarial_seq.push_back(points[left++]);
+            adversarial_seq.push_back(points[right--]);
+
+            if (left < right) {
+                std::size_t mid = left + (right - left) / 2;
+                adversarial_seq.push_back(points[mid]);
+                std::swap(points[mid], points[left]);
+                left++;
+            }
+        }
+
+        points = std::move(adversarial_seq);
     }
 };
 
