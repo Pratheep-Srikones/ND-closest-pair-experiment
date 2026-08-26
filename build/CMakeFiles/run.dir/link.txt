@@ -1,1 +1,1 @@
-/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/run.dir/main.cpp.o -o run  -ltbb 
+/usr/bin/c++ CMakeFiles/run.dir/main.cpp.o -o run  -ltbb 
