@@ -4,6 +4,8 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include <algorithm>
+#include <execution>
 
 #include "closest_pair.h"
 #include "space.h"
@@ -38,8 +40,23 @@ void print_statistics(std::vector<double>& times) {
 template <size_t Dim, size_t NumPoints>
 float run_algorithm_multipleTimes(Space<Dim,NumPoints>& s, int k, bool isRand){
 	//k = (int) std::sqrt(NumPoints);
-	std::vector<double> execution_times;
-	float min_rand;
+	std::vector<double> execution_times(k,0);
+	float min_rand{};
+	/*auto ind = std::views::iota(0,k);
+	for_each(execution::par,ind.begin(),ind.end(),[&execution_times,&s,&isRand](auto i){
+		auto start_rand = chrono::high_resolution_clock::now();
+		if(isRand){
+			(void)find_min_dist_grid_based_randomized(s, false);
+		}else{
+			(void)find_min_dist_grid_based(s, false);
+			
+		}
+    		auto end_rand = chrono::high_resolution_clock::now();
+		chrono::duration<double, milli> rand_ms = end_rand - start_rand;
+		execution_times[i] = rand_ms.count();
+
+		
+	});*/
 	for(int i=0;i<k;i++){
 		auto start_rand = chrono::high_resolution_clock::now();
 		if(isRand){
@@ -89,12 +106,12 @@ bool run_validation_test(const string& test_name) {
     //cout << "  Brute Force Min Dist     : " << min_brute << " (" << brute_ms.count() << " ms)" << endl;
     //cout << "Grid-Based Min Dist      : " << min_grid << " (" << grid_ms.count() << " ms)" << endl;
      cout <<"\nDeterminsitic Grid Statistics & Min Distance----------------------------------------\n"<<endl;
-    auto min_grid = run_algorithm_multipleTimes(space,20,false);
+    auto min_grid = run_algorithm_multipleTimes(space,200,false);
     cout << " Grid Min Dist : " << min_grid << endl;
     
 
     cout <<"\nRandomized Grid Statistics & Min Distance---------------------------------------------\n"<<endl;
-    auto min_rand = run_algorithm_multipleTimes(space,20,true);
+    auto min_rand = run_algorithm_multipleTimes(space,200,true);
     cout << "Randomized Grid Min Dist : " << min_rand << endl;
     cout <<"-----------------------------------------------------------------------------------------------------------------------------------------"<<endl;
     //cout << "  Diff (Brute vs Grid)     : " << diff_grid << endl;

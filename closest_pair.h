@@ -11,7 +11,7 @@
 #include <random>
 #include <unordered_map>
 #include <vector>
-
+#include <ranges>
 #include "space.h"
 
 /// Represents grid cell indices in N-dimensional space using 64-bit integers to prevent overflow.
@@ -156,8 +156,8 @@ template <std::size_t Dim, std::size_t Size>
 /// Finds minimum distance between any pair of points using Rabin's randomized algorithm (shuffling point order first).
 template <std::size_t Dim>
 [[nodiscard]] float find_min_dist_grid_based_randomized(std::vector<Point<Dim>> points, bool verbose = false) {
-    std::random_device rd;
-    std::mt19937 g(rd());
+    thread_local std::random_device rd;
+    thread_local std::mt19937 g(rd());
     std::shuffle(points.begin(), points.end(), g);
     return find_min_dist_grid_based<Dim>(points, verbose);
 }
