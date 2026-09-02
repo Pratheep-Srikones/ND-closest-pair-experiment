@@ -1,5 +1,5 @@
-/media/vithurshan/vithu/rand/build/CMakeFiles/run.dir
-/media/vithurshan/vithu/rand/build/CMakeFiles/experiment.dir
-/media/vithurshan/vithu/rand/build/CMakeFiles/verify.dir
-/media/vithurshan/vithu/rand/build/CMakeFiles/edit_cache.dir
-/media/vithurshan/vithu/rand/build/CMakeFiles/rebuild_cache.dir
+/home/pratheep/Desktop/projects/rand/build/CMakeFiles/run.dir
+/home/pratheep/Desktop/projects/rand/build/CMakeFiles/experiment.dir
+/home/pratheep/Desktop/projects/rand/build/CMakeFiles/verify.dir
+/home/pratheep/Desktop/projects/rand/build/CMakeFiles/edit_cache.dir
+/home/pratheep/Desktop/projects/rand/build/CMakeFiles/rebuild_cache.dir
