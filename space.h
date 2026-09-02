@@ -66,6 +66,52 @@ struct Space {
         });
     }
 
+    /// Factory method to generate an adversarial Space.
+    /// It generates purely random points, sorts them along the primary axis, and then interleaves 
+    /// them from the outside in. This continuously shrinks the expected pairwise distance, 
+    /// triggering frequent O(N) grid rebuilds in the deterministic algorithm.
+    /// Crucially, using random coordinates prevents exact duplicates (delta = 0) which would trigger a fast-path exit.
+    [[nodiscard]] static Space<Dim, Size> create_adversarial_space(float min_val = 0.0f, float max_val = 1000.0f) {
+        Space<Dim, Size> space;
+        if (Size == 0) return space;
+
+        // 1. Generate purely random points (prevents exact 0.0f distances)
+        std::vector<Point<Dim>> temp_points(Size);
+        std::for_each(std::execution::par, temp_points.begin(), temp_points.end(), [min_val, max_val](Point<Dim>& point) {
+            thread_local std::random_device rd;
+            thread_local std::mt19937 gen(rd());
+            std::uniform_real_distribution<float> dist(min_val, max_val);
+            for (auto& coord : point.coordinates) {
+                coord = dist(gen);
+            }
+        });
+
+        // 2. Sort points along the X axis
+        std::sort(std::execution::par, temp_points.begin(), temp_points.end(), [](const Point<Dim>& a, const Point<Dim>& b) {
+            return a.coordinates[0] < b.coordinates[0];
+        });
+
+        // 3. Interleave from the outside in (Left, Right, Left+1, Right-1...)
+        // This ensures the X-distance continuously shrinks, repeatedly dropping delta and forcing rebuilds.
+        std::size_t left = 0;
+        std::size_t right = Size - 1;
+        std::size_t idx = 0;
+
+        space.points.resize(Size);
+        while (left <= right && idx < Size) {
+            if (left == right) {
+                space.points[idx++] = temp_points[left];
+                break;
+            }
+            space.points[idx++] = temp_points[left++];
+            if (idx < Size) {
+                space.points[idx++] = temp_points[right--];
+            }
+        }
+
+        return space;
+    }
+
     /// Sorts or orders points according to the given SortStrategy.
     /// @param strategy Strategy enum defining the point ordering method.
     /// @param axis Coordinate dimension axis to sort along (used when strategy is AxisAscending or AxisDescending).
