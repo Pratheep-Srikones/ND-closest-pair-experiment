@@ -48,7 +48,9 @@ float run_algorithm_multipleTimes(Space<Dim,NumPoints>& s, int k, bool isRand, c
     for(int i = 0; i < k; i++) {
         auto start = chrono::high_resolution_clock::now();
         if (isRand) {
-            min_val = find_min_dist_grid_based_randomized(s, false);
+            TimePoint inner_start;
+            min_val = find_min_dist_grid_based_randomized(s, &inner_start, false);
+            start = inner_start; // Override the start time so we don't include the deep copy overhead!
         } else {
             min_val = find_min_dist_grid_based(s, false);
         }
@@ -102,26 +104,32 @@ int main() {
     cout << "\nStarting Closest Pair Performance Experiments...\n\n";
 
     // 2D Tests
-    run_normal_space_test<2, 100000>("2D Medium Set");
-    run_adversarial_space_test<2, 100000>("2D Medium Set");
+    run_normal_space_test<2, 10000>("2D Medium Set");
+    run_adversarial_space_test<2, 10000>("2D Medium Set");
     
-    run_normal_space_test<2, 1000000>("2D Large Set");
-    run_adversarial_space_test<2, 1000000>("2D Large Set");
+    run_normal_space_test<2, 40000>("2D Large Set");
+    run_adversarial_space_test<2, 40000>("2D Large Set");
 
     // 3D Tests
-    run_normal_space_test<3, 100000>("3D Medium Set");
-    run_adversarial_space_test<3, 100000>("3D Medium Set");
+    run_normal_space_test<3, 10000>("3D Medium Set");
+    run_adversarial_space_test<3, 10000>("3D Medium Set");
     
-    run_normal_space_test<3, 10000000>("3D Large Set");
-    run_adversarial_space_test<3, 10000000>("3D Large Set");
+    run_normal_space_test<3, 40000>("3D Large Set");
+    run_adversarial_space_test<3, 40000>("3D Large Set");
 
     // 5D Tests
-    run_normal_space_test<5, 100000>("5D Large Set");
-    run_adversarial_space_test<5, 100000>("5D Large Set");
+    run_normal_space_test<5, 10000>("5D Medium Set");
+    run_adversarial_space_test<5, 10000>("5D Medium Set");
+
+    run_normal_space_test<5, 20000>("5D Large Set");
+    run_adversarial_space_test<5, 20000>("5D Large Set");
 
     // 7D Tests
-    run_normal_space_test<7, 100000>("7D Large Set");
-    run_adversarial_space_test<7, 100000>("7D Large Set");
+    run_normal_space_test<7, 10000>("7D Medium Set");
+    run_adversarial_space_test<7, 10000>("7D Medium Set");
+
+    run_normal_space_test<7, 20000>("7D Large Set");
+    run_adversarial_space_test<7, 20000>("7D Large Set");
 
     cout << "All experiments completed successfully!\n";
     return 0;

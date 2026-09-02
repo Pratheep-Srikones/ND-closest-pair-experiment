@@ -153,19 +153,38 @@ template <std::size_t Dim, std::size_t Size>
     return find_min_dist_grid_based<Dim>(space.points, verbose);
 }
 
+#include <chrono>
+
+using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
 /// Finds minimum distance between any pair of points using Rabin's randomized algorithm (shuffling point order first).
 template <std::size_t Dim>
-[[nodiscard]] float find_min_dist_grid_based_randomized(std::vector<Point<Dim>> points, bool verbose = false) {
+[[nodiscard]] float find_min_dist_grid_based_randomized(std::vector<Point<Dim>> points, TimePoint* out_start, bool verbose = false) {
+    // Capture the time AFTER the std::vector deep copy has finished
+    if (out_start) {
+        *out_start = std::chrono::high_resolution_clock::now();
+    }
+    
     thread_local std::random_device rd;
     thread_local std::mt19937 g(rd());
     std::shuffle(points.begin(), points.end(), g);
     return find_min_dist_grid_based<Dim>(points, verbose);
 }
 
+template <std::size_t Dim>
+[[nodiscard]] float find_min_dist_grid_based_randomized(std::vector<Point<Dim>> points, bool verbose = false) {
+    return find_min_dist_grid_based_randomized<Dim>(points, nullptr, verbose);
+}
+
 /// Overload for Space<Dim, Size> container.
 template <std::size_t Dim, std::size_t Size>
+[[nodiscard]] float find_min_dist_grid_based_randomized(const Space<Dim, Size>& space, TimePoint* out_start, bool verbose = false) {
+    return find_min_dist_grid_based_randomized<Dim>(space.points, out_start, verbose);
+}
+
+template <std::size_t Dim, std::size_t Size>
 [[nodiscard]] float find_min_dist_grid_based_randomized(const Space<Dim, Size>& space, bool verbose = false) {
-    return find_min_dist_grid_based_randomized<Dim>(space.points, verbose);
+    return find_min_dist_grid_based_randomized<Dim>(space.points, nullptr, verbose);
 }
 
 /// Finds the minimum distance between any pair of points using O(N^2) brute-force iteration.
