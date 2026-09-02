@@ -7,40 +7,89 @@
 #include <numeric>
 #include <algorithm>
 #include <execution>
+#include <fstream>
+#include <ctime>
+#include <sstream>
 
 #include "closest_pair.h"
 #include "space.h"
 
 using namespace std;
 
-void print_statistics(std::vector<double>& times) {                                                                                              
-    if (times.empty()) return;
+std::string current_timestamp() {
+    std::time_t t = std::time(nullptr);
+    char mbstr[100];
+    if (std::strftime(mbstr, sizeof(mbstr), "%Y-%m-%d %H:%M:%S", std::localtime(&t))) {
+        return mbstr;
+    }
+    return "Unknown";
+}
+
+struct Stats {
+    double mean;
+    double median;
+    double std_dev;
+};
+
+void log_to_csv(const std::string& space_type, size_t dim, size_t num_points, 
+                const std::string& input_order, std::string algorithm,
+                int iterations, float min_dist, const Stats& st) {
+    std::string filename = "experiment_results.csv";
+    std::ifstream check_file(filename);
+    bool file_exists = check_file.good();
+    check_file.close();
+    
+    std::ofstream file(filename, std::ios::app);
+    if (!file_exists) {
+        file << "Timestamp,Space_Type,Dimensions,Num_Points,Input_Order,Algorithm,Iterations,Min_Distance,Mean_Time_ms,Median_Time_ms,StdDev_Time_ms\n";
+    }
+    
+    // Trim trailing spaces from algorithm name
+    algorithm.erase(algorithm.find_last_not_of(" ") + 1);
+
+    file << current_timestamp() << ","
+         << space_type << ","
+         << dim << ","
+         << num_points << ","
+         << input_order << ","
+         << algorithm << ","
+         << iterations << ","
+         << std::fixed << std::setprecision(5) << min_dist << ","
+         << std::fixed << std::setprecision(5) << st.mean << ","
+         << std::fixed << std::setprecision(5) << st.median << ","
+         << std::fixed << std::setprecision(5) << st.std_dev << "\n";
+}
+
+Stats print_statistics(std::vector<double>& times) {
+    Stats st = {0,0,0};
+    if (times.empty()) return st;
     size_t n = times.size();
     double sum = std::accumulate(times.begin(), times.end(), 0.0);
-    double mean = sum / n;
+    st.mean = sum / n;
     double variance_sum = 0.0;
     for (double time : times) {
-        variance_sum += (time-mean) * (time-mean);
+        variance_sum += (time - st.mean) * (time - st.mean);
     }
 
     double variance = variance_sum / (n > 1 ? n - 1 : 1);
-    double std_dev = std::sqrt(variance);
+    st.std_dev = std::sqrt(variance);
     std::sort(times.begin(), times.end());
     
-    double median = 0.0;
     if (n % 2 == 0) {
-        median = (times[n/2 - 1] + times[n/2]) / 2.0;
+        st.median = (times[n/2 - 1] + times[n/2]) / 2.0;
     } else {
-        median = times[n / 2];
+        st.median = times[n / 2];
     }
     
-    std::cout << "    Mean     : " << mean << " ms\n";
-    std::cout << "    Median   : " << median << " ms\n";
-    std::cout << "    Std Dev  : " << std_dev << " ms\n";
+    std::cout << "    Mean     : " << st.mean << " ms\n";
+    std::cout << "    Median   : " << st.median << " ms\n";
+    std::cout << "    Std Dev  : " << st.std_dev << " ms\n";
+    
+    return st;
 }
 
 template <size_t Dim, size_t NumPoints>
-float run_algorithm_multipleTimes(Space<Dim,NumPoints>& s, int k, bool isRand, const string& label) {
+float run_algorithm_multipleTimes(Space<Dim,NumPoints>& s, int k, bool isRand, const string& label, const string& space_type, const string& input_order) {
     std::vector<double> execution_times;
     execution_times.reserve(k);
     float min_val = 0.0f;
@@ -60,8 +109,10 @@ float run_algorithm_multipleTimes(Space<Dim,NumPoints>& s, int k, bool isRand, c
     }
     
     std::cout << "  > " << label << " | Min Dist: " << min_val << "\n";
-    print_statistics(execution_times);
+    Stats st = print_statistics(execution_times);
     std::cout << "\n";
+    
+    log_to_csv(space_type, Dim, NumPoints, input_order, label, k, min_val, st);
     
     return min_val;
 }
@@ -76,13 +127,13 @@ void run_normal_space_test(const string& test_name) {
     int iterations = 10;
     
     cout << "--- 1. Original Generation Order ---\n";
-    run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid");
-    run_algorithm_multipleTimes(space, iterations, true,  "Randomized Grid   ");
+    run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid", "Normal", "Original");
+    run_algorithm_multipleTimes(space, iterations, true,  "Randomized Grid   ", "Normal", "Original");
 
     cout << "--- 2. Sorted Order (Axis Ascending) ---\n";
     space.sort_points(SortStrategy::AxisAscending, 0);
-    run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid");
-    run_algorithm_multipleTimes(space, iterations, true,  "Randomized Grid   ");
+    run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid", "Normal", "Sorted_X_Axis");
+    run_algorithm_multipleTimes(space, iterations, true,  "Randomized Grid   ", "Normal", "Sorted_X_Axis");
 }
 
 template <size_t Dim, size_t NumPoints>
@@ -95,8 +146,8 @@ void run_adversarial_space_test(const string& test_name) {
     int iterations = 10;
     
     cout << "--- 1. Adversarial Generation Order ---\n";
-    run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid");
-    run_algorithm_multipleTimes(space, iterations, true,  "Randomized Grid   ");
+    run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid", "Adversarial", "Ladder_of_Pairs");
+    run_algorithm_multipleTimes(space, iterations, true,  "Randomized Grid   ", "Adversarial", "Ladder_of_Pairs");
 }
 
 int main() {

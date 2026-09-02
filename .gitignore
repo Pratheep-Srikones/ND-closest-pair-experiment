@@ -1,2 +1,7 @@
 temp/*
 build/*
+venv/
+plot_results.py
+experiment_results.csv
+*.png
+
