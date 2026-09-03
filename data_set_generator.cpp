@@ -167,3 +167,72 @@ vector<Point<Dim>> generate_clustered(size_t n, size_t num_clusters = 5,
 
   return points;
 }
+
+template <size_t Dim>
+void generate_and_save(const string &type, size_t n, const string &out_dir,
+                       uint64_t seed) {
+  string filename = out_dir + "/" + type + "_d" + to_string(Dim) + "_n" +
+                    to_string(n) + "_seed" + to_string(seed) + ".bin";
+
+  auto t0 = chrono::high_resolution_clock::now();
+  vector<Point<Dim>> points;
+
+  cout << "Generating " << type << " points...\n";
+
+  if (type == "uniform") {
+    points = generate_uniform<Dim>(n, seed);
+  } else if (type == "adversarial") {
+    points = generate_adversarial<Dim>(n);
+  } else if (type == "clustered") {
+    points = generate_clustered<Dim>(n, 5, seed);
+  } else {
+    std::cerr << "Unknown type: " << type << "\n";
+    return;
+  }
+
+  if (save_points<Dim>(filename, points)) {
+    auto t1 = std::chrono::high_resolution_clock::now();
+    double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    double mb = (n * Dim * sizeof(float) + 16) / (1024.0 * 1024.0);
+    std::cout << "Done (" << ms << " ms, " << mb << " MB)\n";
+  }
+}
+
+void dispatch_generation(size_t dim, const string &type, size_t n,
+                         const string &out_dir, uint64_t seed) {
+  switch (dim) {
+  case 2:
+    generate_and_save<2>(type, n, out_dir, seed);
+    break;
+  case 3:
+    generate_and_save<3>(type, n, out_dir, seed);
+    break;
+  case 5:
+    generate_and_save<5>(type, n, out_dir, seed);
+    break;
+  case 7:
+    generate_and_save<7>(type, n, out_dir, seed);
+    break;
+  case 9:
+    generate_and_save<9>(type, n, out_dir, seed);
+    break;
+  default:
+    std::cerr << "Unsupported dimension: " << dim
+              << " (Supported: 2, 3, 5, 7, 9)\n";
+  }
+}
+
+int main(int argc, char *argv[]) {
+  string out_dir = "datasets";
+
+  fs::create_directories(out_dir);
+
+  if (argc >= 4) {
+    size_t dim = stoul(argv[1]);
+    string type = argv[2];
+    size_t n = stoul(argv[3]);
+    uint64_t seed = (argc >= 5) ? std::stoull(argv[4]) : 42;
+
+    dispatch_generation(dim, type, n, out_dir, seed);
+  }
+}
