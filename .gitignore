@@ -5,3 +5,6 @@ plot_results.py
 experiment_results.csv
 *.png
 
+
+.venv/
+

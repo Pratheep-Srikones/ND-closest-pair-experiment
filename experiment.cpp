@@ -33,7 +33,8 @@ struct Stats {
 
 void log_to_csv(const std::string& space_type, size_t dim, size_t num_points, 
                 const std::string& input_order, std::string algorithm,
-                int iterations, float min_dist, const Stats& st) {
+                int iterations, float min_dist, const Stats& st,
+                const std::vector<double>& raw_times) {
     std::string filename = "experiment_results.csv";
     std::ifstream check_file(filename);
     bool file_exists = check_file.good();
@@ -41,11 +42,20 @@ void log_to_csv(const std::string& space_type, size_t dim, size_t num_points,
     
     std::ofstream file(filename, std::ios::app);
     if (!file_exists) {
-        file << "Timestamp,Space_Type,Dimensions,Num_Points,Input_Order,Algorithm,Iterations,Min_Distance,Mean_Time_ms,Median_Time_ms,StdDev_Time_ms\n";
+        file << "Timestamp,Space_Type,Dimensions,Num_Points,Input_Order,Algorithm,Iterations,Min_Distance,Mean_Time_ms,Median_Time_ms,StdDev_Time_ms,Raw_Times_ms\n";
     }
     
     // Trim trailing spaces from algorithm name
     algorithm.erase(algorithm.find_last_not_of(" ") + 1);
+
+    // Format raw times as a JSON-like array inside quotes so CSV parsers treat it as one column
+    std::ostringstream raw_ss;
+    raw_ss << "\"[";
+    for (size_t i = 0; i < raw_times.size(); ++i) {
+        raw_ss << std::fixed << std::setprecision(5) << raw_times[i];
+        if (i < raw_times.size() - 1) raw_ss << ", ";
+    }
+    raw_ss << "]\"";
 
     file << current_timestamp() << ","
          << space_type << ","
@@ -57,7 +67,8 @@ void log_to_csv(const std::string& space_type, size_t dim, size_t num_points,
          << std::fixed << std::setprecision(5) << min_dist << ","
          << std::fixed << std::setprecision(5) << st.mean << ","
          << std::fixed << std::setprecision(5) << st.median << ","
-         << std::fixed << std::setprecision(5) << st.std_dev << "\n";
+         << std::fixed << std::setprecision(5) << st.std_dev << ","
+         << raw_ss.str() << "\n";
 }
 
 Stats print_statistics(std::vector<double>& times) {
@@ -73,12 +84,15 @@ Stats print_statistics(std::vector<double>& times) {
 
     double variance = variance_sum / (n > 1 ? n - 1 : 1);
     st.std_dev = std::sqrt(variance);
-    std::sort(times.begin(), times.end());
+    
+    // We make a copy of times to sort so we don't scramble the original raw sequence
+    std::vector<double> sorted_times = times;
+    std::sort(sorted_times.begin(), sorted_times.end());
     
     if (n % 2 == 0) {
-        st.median = (times[n/2 - 1] + times[n/2]) / 2.0;
+        st.median = (sorted_times[n/2 - 1] + sorted_times[n/2]) / 2.0;
     } else {
-        st.median = times[n / 2];
+        st.median = sorted_times[n / 2];
     }
     
     std::cout << "    Mean     : " << st.mean << " ms\n";
@@ -112,7 +126,7 @@ float run_algorithm_multipleTimes(Space<Dim,NumPoints>& s, int k, bool isRand, c
     Stats st = print_statistics(execution_times);
     std::cout << "\n";
     
-    log_to_csv(space_type, Dim, NumPoints, input_order, label, k, min_val, st);
+    log_to_csv(space_type, Dim, NumPoints, input_order, label, k, min_val, st, execution_times);
     
     return min_val;
 }
@@ -152,36 +166,60 @@ void run_adversarial_space_test(const string& test_name) {
 
 int main() {
     cout << fixed << setprecision(5);
-    cout << "\nStarting Closest Pair Performance Experiments...\n\n";
+    cout << "\nStarting Exhaustive Closest Pair Performance Experiments...\n";
+    cout << "This will run 2D, 3D, 5D, 7D, and 9D across Small, Medium, and Large datasets.\n";
+    cout << "All results are continuously logged to experiment_results.csv.\n\n";
 
-    // 2D Tests
+    // ================== 2D Tests ==================
+    run_normal_space_test<2, 2000>("2D Small Set");
+    run_adversarial_space_test<2, 2000>("2D Small Set");
+
     run_normal_space_test<2, 10000>("2D Medium Set");
     run_adversarial_space_test<2, 10000>("2D Medium Set");
     
-    run_normal_space_test<2, 40000>("2D Large Set");
-    run_adversarial_space_test<2, 40000>("2D Large Set");
+    run_normal_space_test<2, 100000>("2D Large Set");
+    run_adversarial_space_test<2, 100000>("2D Large Set");
 
-    // 3D Tests
+    // ================== 3D Tests ==================
+    run_normal_space_test<3, 2000>("3D Small Set");
+    run_adversarial_space_test<3, 2000>("3D Small Set");
+
     run_normal_space_test<3, 10000>("3D Medium Set");
     run_adversarial_space_test<3, 10000>("3D Medium Set");
     
-    run_normal_space_test<3, 40000>("3D Large Set");
-    run_adversarial_space_test<3, 40000>("3D Large Set");
+    run_normal_space_test<3, 100000>("3D Large Set");
+    run_adversarial_space_test<3, 100000>("3D Large Set");
 
-    // 5D Tests
+    // ================== 5D Tests ==================
+    run_normal_space_test<5, 2000>("5D Small Set");
+    run_adversarial_space_test<5, 2000>("5D Small Set");
+
     run_normal_space_test<5, 10000>("5D Medium Set");
     run_adversarial_space_test<5, 10000>("5D Medium Set");
 
-    run_normal_space_test<5, 20000>("5D Large Set");
-    run_adversarial_space_test<5, 20000>("5D Large Set");
+    run_normal_space_test<5, 80000>("5D Large Set");
+    run_adversarial_space_test<5, 80000>("5D Large Set");
 
-    // 7D Tests
+    // ================== 7D Tests ==================
+    run_normal_space_test<7, 2000>("7D Small Set");
+    run_adversarial_space_test<7, 2000>("7D Small Set");
+
     run_normal_space_test<7, 10000>("7D Medium Set");
     run_adversarial_space_test<7, 10000>("7D Medium Set");
 
-    run_normal_space_test<7, 20000>("7D Large Set");
-    run_adversarial_space_test<7, 20000>("7D Large Set");
+    run_normal_space_test<7, 60000>("7D Large Set");
+    run_adversarial_space_test<7, 60000>("7D Large Set");
 
-    cout << "All experiments completed successfully!\n";
+    // ================== 9D Tests (Extreme Grid Overhead) ==================
+    run_normal_space_test<9, 2000>("9D Small Set");
+    run_adversarial_space_test<9, 2000>("9D Small Set");
+
+    run_normal_space_test<9, 10000>("9D Medium Set");
+    run_adversarial_space_test<9, 10000>("9D Medium Set");
+
+    run_normal_space_test<9, 40000>("9D Large Set");
+    run_adversarial_space_test<9, 40000>("9D Large Set");
+
+    cout << "All exhaustive experiments completed successfully!\n";
     return 0;
 }
