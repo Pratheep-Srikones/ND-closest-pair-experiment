@@ -47,11 +47,8 @@ void log_to_csv(const std::string &space_type, size_t dim, size_t num_points,
             "ms,Raw_Times_ms\n";
   }
 
-  // Trim trailing spaces from algorithm name
   algorithm.erase(algorithm.find_last_not_of(" ") + 1);
 
-  // Format raw times as a JSON-like array inside quotes so CSV parsers treat it
-  // as one column
   std::ostringstream raw_ss;
   raw_ss << "\"[";
   for (size_t i = 0; i < raw_times.size(); ++i) {
@@ -84,8 +81,6 @@ Stats print_statistics(std::vector<double> &times) {
   double variance = variance_sum / (n > 1 ? n - 1 : 1);
   st.std_dev = std::sqrt(variance);
 
-  // We make a copy of times to sort so we don't scramble the original raw
-  // sequence
   std::vector<double> sorted_times = times;
   std::sort(sorted_times.begin(), sorted_times.end());
 
@@ -115,8 +110,7 @@ float run_algorithm_multipleTimes(Space<Dim, NumPoints> &s, int k, bool isRand,
     if (isRand) {
       TimePoint inner_start;
       min_val = find_min_dist_grid_based_randomized(s, &inner_start, false);
-      start = inner_start; // Override the start time so we don't include the
-                           // deep copy overhead!
+      start = inner_start;
     } else {
       min_val = find_min_dist_grid_based(s, false);
     }
@@ -136,107 +130,50 @@ float run_algorithm_multipleTimes(Space<Dim, NumPoints> &s, int k, bool isRand,
 }
 
 template <size_t Dim, size_t NumPoints>
-void run_normal_space_test(const string &test_name) {
-  cout << "===================================================================="
-          "==========\n";
-  cout << "[NORMAL SPACE] " << test_name << " [" << NumPoints << " points in "
-       << Dim << "D]\n";
-  cout << "===================================================================="
-          "==========\n";
+void run_normal_space_test(const string &test_name, int iterations = 3) {
+  cout << "==============================================================================\n";
+  cout << "[NORMAL SPACE] " << test_name << " [" << NumPoints << " points in " << Dim << "D]\n";
+  cout << "==============================================================================\n";
 
   auto space = Space<Dim, NumPoints>::get_or_create("uniform");
-  int iterations = 10;
 
   cout << "--- 1. Original Generation Order ---\n";
-  run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid",
-                              "Normal", "Original");
-  run_algorithm_multipleTimes(space, iterations, true, "Randomized Grid   ",
-                              "Normal", "Original");
+  run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid", "Normal", "Original");
+  run_algorithm_multipleTimes(space, iterations, true, "Randomized Grid   ", "Normal", "Original");
 
   cout << "--- 2. Sorted Order (Axis Ascending) ---\n";
   space.sort_points(SortStrategy::AxisAscending, 0);
-  run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid",
-                              "Normal", "Sorted_X_Axis");
-  run_algorithm_multipleTimes(space, iterations, true, "Randomized Grid   ",
-                              "Normal", "Sorted_X_Axis");
+  run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid", "Normal", "Sorted_X_Axis");
+  run_algorithm_multipleTimes(space, iterations, true, "Randomized Grid   ", "Normal", "Sorted_X_Axis");
 }
 
 template <size_t Dim, size_t NumPoints>
-void run_adversarial_space_test(const string &test_name) {
-  cout << "===================================================================="
-          "==========\n";
-  cout << "[ADVERSARIAL SPACE] " << test_name << " [" << NumPoints
-       << " points in " << Dim << "D]\n";
-  cout << "===================================================================="
-          "==========\n";
+void run_adversarial_space_test(const string &test_name, int iterations = 3) {
+  cout << "==============================================================================\n";
+  cout << "[ADVERSARIAL SPACE] " << test_name << " [" << NumPoints << " points in " << Dim << "D]\n";
+  cout << "==============================================================================\n";
 
   auto space = Space<Dim, NumPoints>::get_or_create("adversarial");
-  int iterations = 10;
 
   cout << "--- 1. Adversarial Generation Order ---\n";
-  run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid",
-                              "Adversarial", "Ladder_of_Pairs");
-  run_algorithm_multipleTimes(space, iterations, true, "Randomized Grid   ",
-                              "Adversarial", "Ladder_of_Pairs");
+  run_algorithm_multipleTimes(space, iterations, false, "Deterministic Grid", "Adversarial", "Ladder_of_Pairs");
+  run_algorithm_multipleTimes(space, iterations, true, "Randomized Grid   ", "Adversarial", "Ladder_of_Pairs");
 }
 
 int main() {
   cout << fixed << setprecision(5);
-  cout << "\nStarting Exhaustive Closest Pair Performance Experiments...\n";
-  cout << "This will run 2D, 3D, 5D, 7D, and 9D across Small, Medium, and "
-          "Large datasets.\n";
-  cout << "All results are continuously logged to experiment_results.csv.\n\n";
+  cout << "\n=== Running Quick Closest Pair Experiment (Verification) ===\n";
+  cout << "Testing dataset creation / loading and algorithm execution...\n\n";
 
-  // ================== 2D Tests ==================
-  run_normal_space_test<2, 2000>("2D Small Set");
-  run_adversarial_space_test<2, 2000>("2D Small Set");
+  int iters = 3;
 
-  run_normal_space_test<2, 10000>("2D Medium Set");
-  run_adversarial_space_test<2, 10000>("2D Medium Set");
+  // 2D & 3D Small sets (2000 points) for quick execution
+  run_normal_space_test<2, 2000>("2D Small Set", iters);
+  run_adversarial_space_test<2, 2000>("2D Small Set", iters);
 
-  run_normal_space_test<2, 100000>("2D Large Set");
-  run_adversarial_space_test<2, 100000>("2D Large Set");
+  run_normal_space_test<3, 2000>("3D Small Set", iters);
+  run_adversarial_space_test<3, 2000>("3D Small Set", iters);
 
-  // ================== 3D Tests ==================
-  run_normal_space_test<3, 2000>("3D Small Set");
-  run_adversarial_space_test<3, 2000>("3D Small Set");
-
-  run_normal_space_test<3, 10000>("3D Medium Set");
-  run_adversarial_space_test<3, 10000>("3D Medium Set");
-
-  run_normal_space_test<3, 100000>("3D Large Set");
-  run_adversarial_space_test<3, 100000>("3D Large Set");
-
-  // ================== 5D Tests ==================
-  run_normal_space_test<5, 2000>("5D Small Set");
-  run_adversarial_space_test<5, 2000>("5D Small Set");
-
-  run_normal_space_test<5, 10000>("5D Medium Set");
-  run_adversarial_space_test<5, 10000>("5D Medium Set");
-
-  run_normal_space_test<5, 80000>("5D Large Set");
-  run_adversarial_space_test<5, 80000>("5D Large Set");
-
-  // ================== 7D Tests ==================
-  run_normal_space_test<7, 2000>("7D Small Set");
-  run_adversarial_space_test<7, 2000>("7D Small Set");
-
-  run_normal_space_test<7, 10000>("7D Medium Set");
-  run_adversarial_space_test<7, 10000>("7D Medium Set");
-
-  run_normal_space_test<7, 60000>("7D Large Set");
-  run_adversarial_space_test<7, 60000>("7D Large Set");
-
-  // ================== 9D Tests (Extreme Grid Overhead) ==================
-  run_normal_space_test<9, 2000>("9D Small Set");
-  run_adversarial_space_test<9, 2000>("9D Small Set");
-
-  run_normal_space_test<9, 10000>("9D Medium Set");
-  run_adversarial_space_test<9, 10000>("9D Medium Set");
-
-  run_normal_space_test<9, 40000>("9D Large Set");
-  run_adversarial_space_test<9, 40000>("9D Large Set");
-
-  cout << "All exhaustive experiments completed successfully!\n";
+  cout << "\nQuick experiment completed successfully!\n";
   return 0;
 }

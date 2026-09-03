@@ -45,6 +45,63 @@ enum class SortStrategy {
     Adversarial                  ///< Order points to maximize grid rebuilds in incremental closest-pair algorithms.
 };
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <string>
+
+/// Binary I/O helpers for point datasets
+template <std::size_t Dim>
+bool save_points_to_bin(const std::string& filepath, const std::vector<Point<Dim>>& points) {
+    std::ofstream out(filepath, std::ios::binary);
+    if (!out.is_open()) {
+        std::cerr << "[DatasetIO] Error opening file for writing: " << filepath << "\n";
+        return false;
+    }
+
+    const char magic[4] = {'N', 'D', 'P', 'T'};
+    uint32_t dim = static_cast<uint32_t>(Dim);
+    uint64_t count = static_cast<uint64_t>(points.size());
+
+    out.write(magic, sizeof(magic));
+    out.write(reinterpret_cast<const char*>(&dim), sizeof(dim));
+    out.write(reinterpret_cast<const char*>(&count), sizeof(count));
+    out.write(reinterpret_cast<const char*>(points.data()), count * sizeof(Point<Dim>));
+
+    return out.good();
+}
+
+template <std::size_t Dim>
+bool load_points_from_bin(const std::string& filepath, std::vector<Point<Dim>>& points) {
+    std::ifstream in(filepath, std::ios::binary);
+    if (!in.is_open()) {
+        return false;
+    }
+
+    char magic[4];
+    uint32_t dim = 0;
+    uint64_t count = 0;
+
+    in.read(magic, 4);
+    if (std::string(magic, 4) != "NDPT") {
+        std::cerr << "[DatasetIO] Error: invalid magic bytes in " << filepath << "\n";
+        return false;
+    }
+
+    in.read(reinterpret_cast<char*>(&dim), sizeof(dim));
+    in.read(reinterpret_cast<char*>(&count), sizeof(count));
+
+    if (dim != Dim) {
+        std::cerr << "[DatasetIO] Error: Dimension mismatch in " << filepath
+                  << " (file: " << dim << ", expected: " << Dim << ")\n";
+        return false;
+    }
+
+    points.resize(count);
+    in.read(reinterpret_cast<char*>(points.data()), count * sizeof(Point<Dim>));
+    return in.good();
+}
+
 /// Container representing an N-dimensional space populated with random points.
 template <std::size_t Dim, std::size_t Size>
 struct Space {
@@ -53,17 +110,23 @@ struct Space {
 
     std::vector<Point<Dim>> points;
 
-    /// Initializes points with uniform random coordinates in [min_val, max_val].
-    explicit Space(float min_val = 0.0f, float max_val = 1000.0f) : points(Size) {
-        std::for_each(std::execution::par, points.begin(), points.end(), [min_val, max_val](Point<Dim>& point) {
-            thread_local std::random_device rd;
-            thread_local std::mt19937 gen(rd());
-            std::uniform_real_distribution<float> dist(min_val, max_val);
+    /// Default constructor creating uninitialized vector of size Size
+    Space() : points(Size) {}
 
+    /// Initializes points with uniform random coordinates in [min_val, max_val].
+    explicit Space(float min_val, float max_val, uint64_t seed = 42) : points(Size) {
+        std::mt19937_64 gen(seed);
+        std::uniform_real_distribution<float> dist(min_val, max_val);
+
+        for (auto& point : points) {
             for (auto& coord : point.coordinates) {
                 coord = dist(gen);
             }
-        });
+        }
+    }
+
+    [[nodiscard]] static Space<Dim, Size> create_uniform_space(float min_val = 0.0f, float max_val = 1000.0f, uint64_t seed = 42) {
+        return Space<Dim, Size>(min_val, max_val, seed);
     }
 
     [[nodiscard]] static Space<Dim, Size> create_adversarial_space(float min_val = 0.0f, float max_val = 1000.0f) {
@@ -111,6 +174,33 @@ struct Space {
             current_y += y_spacing;
         }
 
+        return space;
+    }
+
+    /// Loads points from pre-existing dataset file, or generates and saves them if not found.
+    [[nodiscard]] static Space<Dim, Size> get_or_create(const std::string& type = "uniform",
+                                                        const std::string& dir = "datasets",
+                                                        uint64_t seed = 42) {
+        std::filesystem::create_directories(dir);
+        std::string filename = dir + "/" + type + "_d" + std::to_string(Dim) + "_n" + std::to_string(Size) + ".bin";
+
+        Space<Dim, Size> space;
+        if (std::filesystem::exists(filename)) {
+            if (load_points_from_bin<Dim>(filename, space.points) && space.points.size() == Size) {
+                std::cout << "[Dataset] Loaded existing cached dataset: " << filename << "\n";
+                return space;
+            }
+            std::cout << "[Dataset] Warning: Failed reading " << filename << ", regenerating...\n";
+        }
+
+        std::cout << "[Dataset] Generating and caching dataset: " << filename << "\n";
+        if (type == "adversarial") {
+            space = create_adversarial_space();
+        } else {
+            space = create_uniform_space(0.0f, 1000.0f, seed);
+        }
+
+        save_points_to_bin<Dim>(filename, space.points);
         return space;
     }
 

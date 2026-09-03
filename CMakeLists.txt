@@ -11,3 +11,8 @@ add_executable(experiment experiment.cpp)
 target_link_libraries(experiment tbb)
 add_executable(verify verify.cpp)
 target_link_libraries(verify tbb)
+add_executable(data_set_generator data_set_generator.cpp)
+target_link_libraries(data_set_generator tbb)
+add_executable(experiment_quick experiment_quick.cpp)
+target_link_libraries(experiment_quick tbb)
+

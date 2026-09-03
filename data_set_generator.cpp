@@ -12,66 +12,11 @@
 #include "space.h"
 
 namespace fs = std::filesystem;
-
 using namespace std;
 
-template <size_t Dim>
-bool save_points(const string &filepath, const vector<Point<Dim>> &points) {
-  ofstream out(filepath, ios::binary);
-  if (!out.is_open()) {
-    cerr << "error: could not open file for writing: " << filepath << endl;
-    return false;
-  }
-
-  const char magic[4] = {'N', 'D', 'P', 'F'};
-  uint32_t dim = static_cast<uint32_t>(Dim);
-  uint32_t count = static_cast<uint32_t>(points.size());
-
-  out.write(magic, sizeof(magic));
-  out.write(reinterpret_cast<const char *>(&dim), sizeof(dim));
-  out.write(reinterpret_cast<const char *>(&count), sizeof(count));
-
-  out.write(reinterpret_cast<const char *>(points.data()),
-            count * sizeof(Point<Dim>));
-
-  out.close();
-  return out.good();
-}
-
-template <size_t Dim>
-bool load_points(const string &filepath, vector<Point<Dim>> &points) {
-  ifstream in(filepath, ios::binary);
-  if (!in.is_open()) {
-    cerr << "error: could not open file for reading: " << filepath << endl;
-    return false;
-  }
-
-  char magic[4];
-  uint32_t dim;
-  uint32_t count;
-
-  in.read(magic, 4);
-
-  if (std::string(magic, 4) != "NDPT") {
-    cerr << "error: invalid file format (wrong magic bytes).\n";
-    return false;
-  }
-
-  in.read(reinterpret_cast<char *>(&dim), sizeof(dim));
-  in.read(reinterpret_cast<char *>(&count), sizeof(count));
-
-  if (dim != Dim) {
-    cerr << "error: dimension mismatch. file says " << dim << ", expected "
-         << Dim << endl;
-    return false;
-  }
-
-  points.resize(count);
-  in.read(reinterpret_cast<char *>(points.data()), count * sizeof(Point<Dim>));
-
-  in.close();
-  return in.good();
-}
+// ============================================================================
+// Generators for Different Distributions
+// ============================================================================
 
 template <size_t Dim>
 vector<Point<Dim>> generate_uniform(size_t n, uint64_t seed = 42,
@@ -81,13 +26,11 @@ vector<Point<Dim>> generate_uniform(size_t n, uint64_t seed = 42,
   uniform_real_distribution<float> dist(min_val, max_val);
 
   vector<Point<Dim>> points(n);
-
   for (size_t i = 0; i < n; i++) {
     for (size_t d = 0; d < Dim; ++d) {
       points[i].coordinates[d] = dist(gen);
     }
   }
-
   return points;
 }
 
@@ -107,7 +50,7 @@ vector<Point<Dim>> generate_adversarial(size_t n, float min_val = 0.0f,
 
   float y_spacing = range / (num_pairs + 1.0f);
   float current_pair_dist = y_spacing * 0.9f;
-
+  float distance_decrement = current_pair_dist / (num_pairs * 2.0f);
   float current_y = min_val + y_spacing;
 
   for (size_t i = 0; i < n; i += 2) {
@@ -124,16 +67,18 @@ vector<Point<Dim>> generate_adversarial(size_t n, float min_val = 0.0f,
       }
       p1.coordinates[0] = min_val;
       p2.coordinates[0] = min_val + current_pair_dist;
+    } else {
+      p1.coordinates[0] = current_y;
+      p2.coordinates[0] = current_y + current_pair_dist;
     }
 
     points[i] = p1;
-
     if (i + 1 < n) {
       points[i + 1] = p2;
     }
 
+    current_pair_dist -= distance_decrement;
     current_y += y_spacing;
-    current_pair_dist *= 0.95f;
   }
 
   return points;
@@ -141,7 +86,7 @@ vector<Point<Dim>> generate_adversarial(size_t n, float min_val = 0.0f,
 
 template <size_t Dim>
 vector<Point<Dim>> generate_clustered(size_t n, size_t num_clusters = 5,
-                                      uint32_t seed = 32, float min_val = 0.0f,
+                                      uint64_t seed = 42, float min_val = 0.0f,
                                       float max_val = 1000.0f) {
   mt19937_64 gen(seed);
   uniform_real_distribution<float> center_dist(min_val + 100.0f,
@@ -172,12 +117,12 @@ template <size_t Dim>
 void generate_and_save(const string &type, size_t n, const string &out_dir,
                        uint64_t seed) {
   string filename = out_dir + "/" + type + "_d" + to_string(Dim) + "_n" +
-                    to_string(n) + "_seed" + to_string(seed) + ".bin";
+                    to_string(n) + ".bin";
 
   auto t0 = chrono::high_resolution_clock::now();
   vector<Point<Dim>> points;
 
-  cout << "Generating " << type << " points...\n";
+  cout << "Generating " << type << " [Dim=" << Dim << ", N=" << n << "] -> " << filename << " ... " << flush;
 
   if (type == "uniform") {
     points = generate_uniform<Dim>(n, seed);
@@ -186,15 +131,15 @@ void generate_and_save(const string &type, size_t n, const string &out_dir,
   } else if (type == "clustered") {
     points = generate_clustered<Dim>(n, 5, seed);
   } else {
-    std::cerr << "Unknown type: " << type << "\n";
+    cerr << "Unknown type: " << type << "\n";
     return;
   }
 
-  if (save_points<Dim>(filename, points)) {
-    auto t1 = std::chrono::high_resolution_clock::now();
-    double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+  if (save_points_to_bin<Dim>(filename, points)) {
+    auto t1 = chrono::high_resolution_clock::now();
+    double ms = chrono::duration<double, milli>(t1 - t0).count();
     double mb = (n * Dim * sizeof(float) + 16) / (1024.0 * 1024.0);
-    std::cout << "Done (" << ms << " ms, " << mb << " MB)\n";
+    cout << "Done (" << ms << " ms, " << mb << " MB)\n";
   }
 }
 
@@ -217,22 +162,54 @@ void dispatch_generation(size_t dim, const string &type, size_t n,
     generate_and_save<9>(type, n, out_dir, seed);
     break;
   default:
-    std::cerr << "Unsupported dimension: " << dim
-              << " (Supported: 2, 3, 5, 7, 9)\n";
+    cerr << "Unsupported dimension: " << dim
+         << " (Supported: 2, 3, 5, 7, 9)\n";
   }
 }
 
 int main(int argc, char *argv[]) {
   string out_dir = "datasets";
-
   fs::create_directories(out_dir);
+
+  if (argc > 1 && (string(argv[1]) == "--help" || string(argv[1]) == "-h")) {
+    cout << "Usage:\n"
+         << "  ./data_set_generator                        # Generate all benchmark datasets\n"
+         << "  ./data_set_generator <dim> <type> <n> [seed] # Generate specific dataset\n"
+         << "Types: uniform, adversarial, clustered\n";
+    return 0;
+  }
 
   if (argc >= 4) {
     size_t dim = stoul(argv[1]);
     string type = argv[2];
     size_t n = stoul(argv[3]);
-    uint64_t seed = (argc >= 5) ? std::stoull(argv[4]) : 42;
+    uint64_t seed = (argc >= 5) ? stoull(argv[4]) : 42;
 
     dispatch_generation(dim, type, n, out_dir, seed);
+    return 0;
   }
+
+  cout << "=== Generating Benchmark Datasets for Closest Pair Experiments in ./" << out_dir << " ===\n\n";
+
+  const vector<pair<size_t, vector<size_t>>> benchmarks = {
+      {2, {2000, 10000, 100000}},
+      {3, {2000, 10000, 100000}},
+      {5, {2000, 10000, 80000}},
+      {7, {2000, 10000, 60000}},
+      {9, {2000, 10000, 40000}}
+  };
+
+  const vector<string> types = {"uniform", "adversarial"};
+
+  uint64_t seed = 42;
+  for (const auto &[dim, sizes] : benchmarks) {
+    for (const auto &type : types) {
+      for (size_t n : sizes) {
+        dispatch_generation(dim, type, n, out_dir, seed++);
+      }
+    }
+  }
+
+  cout << "\nAll benchmark datasets generated successfully in " << out_dir << "/\n";
+  return 0;
 }
