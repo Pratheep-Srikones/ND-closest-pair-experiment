@@ -72,7 +72,7 @@ struct Space {
         space.points.resize(Size);
 
         float range = max_val - min_val;
-        float num_pairs = static_cast<float>(Size / 2);
+        float num_pairs = static_cast<float>(Size) / 2.0f;
         if (num_pairs < 1.0f) num_pairs = 1.0f;
 
         // Distribute pairs evenly across the available space on the Y-axis
