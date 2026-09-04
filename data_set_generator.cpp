@@ -3,7 +3,6 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <random>
 #include <string>
@@ -13,10 +12,6 @@
 
 namespace fs = std::filesystem;
 using namespace std;
-
-// ============================================================================
-// Generators for Different Distributions
-// ============================================================================
 
 template <size_t Dim>
 vector<Point<Dim>> generate_uniform(size_t n, uint64_t seed = 42,
@@ -122,7 +117,8 @@ void generate_and_save(const string &type, size_t n, const string &out_dir,
   auto t0 = chrono::high_resolution_clock::now();
   vector<Point<Dim>> points;
 
-  cout << "Generating " << type << " [Dim=" << Dim << ", N=" << n << "] -> " << filename << " ... " << flush;
+  cout << "Generating " << type << " [Dim=" << Dim << ", N=" << n << "] -> "
+       << filename << " ... " << flush;
 
   if (type == "uniform") {
     points = generate_uniform<Dim>(n, seed);
@@ -162,8 +158,7 @@ void dispatch_generation(size_t dim, const string &type, size_t n,
     generate_and_save<9>(type, n, out_dir, seed);
     break;
   default:
-    cerr << "Unsupported dimension: " << dim
-         << " (Supported: 2, 3, 5, 7, 9)\n";
+    cerr << "Unsupported dimension: " << dim << " (Supported: 2, 3, 5, 7, 9)\n";
   }
 }
 
@@ -173,8 +168,10 @@ int main(int argc, char *argv[]) {
 
   if (argc > 1 && (string(argv[1]) == "--help" || string(argv[1]) == "-h")) {
     cout << "Usage:\n"
-         << "  ./data_set_generator                        # Generate all benchmark datasets\n"
-         << "  ./data_set_generator <dim> <type> <n> [seed] # Generate specific dataset\n"
+         << "  ./data_set_generator                        # Generate all "
+            "benchmark datasets\n"
+         << "  ./data_set_generator <dim> <type> <n> [seed] # Generate "
+            "specific dataset\n"
          << "Types: uniform, adversarial, clustered\n";
     return 0;
   }
@@ -189,15 +186,15 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  cout << "=== Generating Benchmark Datasets for Closest Pair Experiments in ./" << out_dir << " ===\n\n";
+  cout << "=== Generating Benchmark Datasets for Closest Pair Experiments in ./"
+       << out_dir << " ===\n\n";
 
   const vector<pair<size_t, vector<size_t>>> benchmarks = {
       {2, {2000, 10000, 100000}},
       {3, {2000, 10000, 100000}},
       {5, {2000, 10000, 80000}},
       {7, {2000, 10000, 60000}},
-      {9, {2000, 10000, 40000}}
-  };
+      {9, {2000, 10000, 40000}}};
 
   const vector<string> types = {"uniform", "adversarial"};
 
@@ -210,6 +207,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  cout << "\nAll benchmark datasets generated successfully in " << out_dir << "/\n";
+  cout << "\nAll benchmark datasets generated successfully in " << out_dir
+       << "/\n";
   return 0;
 }
